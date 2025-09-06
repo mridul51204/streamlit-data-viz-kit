@@ -37,3 +37,11 @@ def box_by_period(df: pd.DataFrame, period: str = "Y", color_by: str = None):
                  title=f"Metric by {period} Period")
     fig.update_layout(height=420)
     return fig
+
+def line_over_time(df, time="_time", metric="_metric", grain="M", agg="sum"):
+    if time not in df.columns: return None
+    d = df.dropna(subset=[time]).set_index(time)[metric].resample(grain).agg(agg).reset_index()
+    fig = px.line(d, x=time, y=metric, markers=True, title=f"{agg.title()} over time ({grain})")
+    fig.update_layout(height=420)
+    return fig
+
