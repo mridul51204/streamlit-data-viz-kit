@@ -1,21 +1,23 @@
 import pandas as pd
 
-def coerce_time(s: pd.Series) -> pd.Series:
-    return pd.to_datetime(s, errors="coerce")
+def coerce_time_any(s: pd.Series) -> pd.Series:
+    t = pd.to_datetime(s, errors="coerce")
+    if t.notna().sum() >= 0.5 * len(s):
+        return t
+    y = pd.to_numeric(s, errors="coerce")
+    if y.notna().sum() >= 0.8 * len(s):
+        return pd.to_datetime(y.astype("Int64").astype(str) + "-01-01", errors="coerce")
+    return t
 
 def derive_standard_columns(df: pd.DataFrame, roles: dict) -> pd.DataFrame:
     d = df.copy()
-    mapping = {}
-    if roles.get("time"): mapping[roles["time"]] = "_time"
-    mapping[roles["metric"]] = "_metric"
-    if roles.get("category"): mapping[roles["category"]] = "_cat"
-    if roles.get("id"): mapping[roles["id"]] = "_id"
-    d = d.rename(columns=mapping)
-
-    if "_time" in d.columns:
-        d["_time"] = coerce_time(d["_time"])
-    d["_metric"] = pd.to_numeric(d["_metric"], errors="coerce")
-
+    if roles.get("time") in d.columns:
+        d["_time"] = coerce_time_any(d[roles["time"]])
+    d["_metric"] = pd.to_numeric(d[roles["metric"]], errors="coerce")
+    if roles.get("category") in d.columns:
+        d["_cat"] = d[roles["category"]].astype(str)
+    if roles.get("id") in d.columns:
+        d["_id"] = d[roles["id"]].astype(str)
     return d
 
 def topk_bucket(df: pd.DataFrame, k: int = 10) -> pd.DataFrame:
